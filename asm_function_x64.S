@@ -174,14 +174,14 @@ guest_run:
 		cpuid
 		Asm_popad
 		popfq
-		xor %rax,%rax
+		xorq %rax,%rax
 		ret
 
 host_run:
 		vmxoff
 		Asm_popad
 		popfq
-		xor %rax,%rax
+		xorq %rax,%rax
 
 		inc %rax
 		ret
