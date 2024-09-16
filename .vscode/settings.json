@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "delay.h": "c",
+        "module.h": "c",
+        "vmcsfield.h": "c",
+        "compare": "c",
+        "cstdint": "c"
+    }
+}

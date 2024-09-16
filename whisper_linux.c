@@ -301,7 +301,9 @@ bool SetupVMCS(void *guest_rsp, void *guest_rip, void *host_rip) {
 
     Asm_vmxWrite(VmcsField_kGuestRsp, guest_rsp);
     Asm_vmxWrite(VmcsField_kGuestRip, guest_rip);
-    Asm_vmxWrite(VmcsField_kHostRsp, guest_rsp);
+
+    char *host_rsp = (char*)kmalloc(4096 * 3, GFP_KERNEL);
+    Asm_vmxWrite(VmcsField_kHostRsp, host_rsp + 4096 * 3);
     Asm_vmxWrite(VmcsField_kHostRip, host_rip);
 
     Asm_launch();
