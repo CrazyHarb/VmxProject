@@ -271,6 +271,6 @@ call_vmmOff:
 	movq 0(%rsp), %rax
 	movq 8(%rsp), %rsp
 
-	jmp %rax
+	jmp *%rax
 	
 	             

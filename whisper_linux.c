@@ -299,12 +299,12 @@ bool SetupVMCS(void *guest_rsp, void *guest_rip, void *host_rip) {
     Asm_vmxWrite(VmcsField_kVmEntryControls, WhisperAdjustControlValue((l_bool_useTrueMsr) ? Msr_kIa32VmxTrueEntryCtls: Msr_kIa32VmxEntryCtls, (1 << 2) | (1 << 9)));
     Asm_vmxWrite(VmcsField_kSecondaryVmExecControl, WhisperAdjustControlValue(Msr_kIa32VmxProcBasedCtls2, 0));
 
-    Asm_vmxWrite(VmcsField_kGuestRsp, guest_rsp);
-    Asm_vmxWrite(VmcsField_kGuestRip, guest_rip);
+    Asm_vmxWrite(VmcsField_kGuestRsp, (uint64_t)guest_rsp);
+    Asm_vmxWrite(VmcsField_kGuestRip, (uint64_t)guest_rip);
 
     char *host_rsp = (char*)kmalloc(4096 * 3, GFP_KERNEL);
-    Asm_vmxWrite(VmcsField_kHostRsp, host_rsp + 4096 * 3);
-    Asm_vmxWrite(VmcsField_kHostRip, host_rip);
+    Asm_vmxWrite(VmcsField_kHostRsp, (uint64_t)(host_rsp + 4096 * 3));
+    Asm_vmxWrite(VmcsField_kHostRip, (uint64_t)host_rip);
 
     Asm_launch();
 

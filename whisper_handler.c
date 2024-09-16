@@ -13,7 +13,7 @@ bool WhisperExitHandler(Whisper_Call_Stack *stack) {
 	uint64_t guest_cr8 = Asm_ReadCr8();
 	Guest_Context guest_context = {
 		.stack = stack,
-		.flag_reg = Asm_VmRead(VmcsField_kGuestRflags),
+		.flag_reg = {Asm_VmRead(VmcsField_kGuestRflags)},
 		.ip = Asm_VmRead(VmcsField_kGuestRip),
 		.cr8 = guest_cr8,
 		.vm_continue = false };
