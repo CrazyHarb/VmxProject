@@ -7,6 +7,7 @@
 #include <linux/smp.h>
 #include "asm_function_x64.h"
 #include "vmcsfield.h"
+#include "rdmsr_struct.h"
 
 
 MODULE_LICENSE("Dual BSD/GPL");
@@ -140,8 +141,8 @@ typedef struct _Gdtr {
 void InitCrX(void) {
 
     unsigned long val0 = read_cr0();
-    unsigned long long cr0fixed0 = __rdmsr(0x486);
-    unsigned long long cr0fixed1 = __rdmsr(0x487);
+    unsigned long long cr0fixed0 = __rdmsr(Msr_kIa32VmxCr0Fixed0);
+    unsigned long long cr0fixed1 = __rdmsr(Msr_kIa32VmxCr0Fixed1);
 
     val0 &= cr0fixed1;
     val0 |= cr0fixed0;
@@ -150,8 +151,8 @@ void InitCrX(void) {
 
 
     unsigned long val4 = __read_cr4();
-    unsigned long long cr4fixed0 = __rdmsr(0x488);
-    unsigned long long cr4fixed1 = __rdmsr(0x489);
+    unsigned long long cr4fixed0 = __rdmsr(Msr_kIa32VmxCr4Fixed0);
+    unsigned long long cr4fixed1 = __rdmsr(Msr_kIa32VmxCr4Fixed1);
 
     val4 &= cr4fixed1;
     val4 |= cr4fixed0;
@@ -162,7 +163,7 @@ void InitCrX(void) {
 bool InitVmxon(void) {
 
     bool l_bool_result = false;
-    unsigned long long val = __rdmsr(0x480);
+    unsigned long long val = __rdmsr(Msr_kIa32VmxBasic);
 
     PVm_Control_Structure vmxonbuf = kmalloc(4096, GFP_KERNEL);
 
@@ -178,7 +179,7 @@ bool InitVmxon(void) {
 
 bool InitVmcs(void) {
   bool l_bool_result = false;
-    unsigned long long val = __rdmsr(0x480);
+    unsigned long long val = __rdmsr(Msr_kIa32VmxBasic);
 
     PVm_Control_Structure vmcsbuf = kmalloc(4096, GFP_KERNEL);
 
@@ -218,7 +219,7 @@ bool SetupVMCS(void *guest_rsp, void *guest_rip, void *host_rip) {
     Asm_vmxWrite(VmcsField_kGuestLdtrSelector, Asm_readldtr());
     Asm_vmxWrite(VmcsField_kGuestTrSelector, Asm_readTR());
     
-    Asm_vmxWrite(VmcsField_kGuestIa32Debugctl, __rdmsr(0x1d9));
+    Asm_vmxWrite(VmcsField_kGuestIa32Debugctl, __rdmsr(Msr_kIa32Debugctl));
     
     Asm_vmxWrite(VmcsField_kGuestEsLimit, __segmentlimit(Asm_readES()));
     Asm_vmxWrite(VmcsField_kGuestCsLimit, __segmentlimit(Asm_readCS()));
@@ -239,7 +240,7 @@ bool SetupVMCS(void *guest_rsp, void *guest_rip, void *host_rip) {
     Asm_vmxWrite(VmcsField_kGuestLdtrArBytes, WhisperGetSegmentAccessRight(Asm_readldtr()));
     Asm_vmxWrite(VmcsField_kGuestTrArBytes, WhisperGetSegmentAccessRight(Asm_readTR()));
     
-    Asm_vmxWrite(VmcsField_kGuestSysenterCs, __rdmsr(0x174));
+    Asm_vmxWrite(VmcsField_kGuestSysenterCs, __rdmsr(Msr_kIa32SysenterCs));
     Asm_vmxWrite(VmcsField_kCr0GuestHostMask, 0);
     Asm_vmxWrite(VmcsField_kCr4GuestHostMask, 0);
     Asm_vmxWrite(VmcsField_kCr0ReadShadow, 0);
@@ -253,8 +254,8 @@ bool SetupVMCS(void *guest_rsp, void *guest_rip, void *host_rip) {
     Asm_vmxWrite(VmcsField_kGuestSsBase, 0);
     Asm_vmxWrite(VmcsField_kGuestDsBase, 0);
     
-    Asm_vmxWrite(VmcsField_kGuestFsBase,  __rdmsr(0xC0000100));
-    Asm_vmxWrite(VmcsField_kGuestGsBase,  __rdmsr(0xC0000101));
+    Asm_vmxWrite(VmcsField_kGuestFsBase,  __rdmsr(Msr_kIa32FsBase));
+    Asm_vmxWrite(VmcsField_kGuestGsBase,  __rdmsr(Msr_kIa32GsBase));
     
     Asm_vmxWrite(VmcsField_kGuestLdtrBase, WhisperGetSegmentBase(gdtr.base, Asm_readldtr()));
     Asm_vmxWrite(VmcsField_kGuestTrBase, WhisperGetSegmentBase(gdtr.base, Asm_readTR()));
@@ -263,8 +264,8 @@ bool SetupVMCS(void *guest_rsp, void *guest_rip, void *host_rip) {
     Asm_vmxWrite(VmcsField_kGuestDr7, Asm_readDr7());
     Asm_vmxWrite(VmcsField_kGuestRflags, Asm_readEflags());
     
-    Asm_vmxWrite(VmcsField_kGuestSysenterEsp, __rdmsr(0x175));
-    Asm_vmxWrite(VmcsField_kGuestSysenterEip, __rdmsr(0x176));
+    Asm_vmxWrite(VmcsField_kGuestSysenterEsp, __rdmsr(Msr_kIa32SysenterEsp));
+    Asm_vmxWrite(VmcsField_kGuestSysenterEip, __rdmsr(Msr_kIa32SysenterEip));
 
     Asm_vmxWrite(VmcsField_kHostEsSelector, Asm_readES() & 0xf8);
     Asm_vmxWrite(VmcsField_kHostCsSelector, Asm_readCS() & 0xf8);
@@ -274,12 +275,12 @@ bool SetupVMCS(void *guest_rsp, void *guest_rip, void *host_rip) {
     Asm_vmxWrite(VmcsField_kHostGsSelector, Asm_readGS() & 0xf8);
     Asm_vmxWrite(VmcsField_kHostTrSelector, Asm_readTR() & 0xf8);
 
-    Asm_vmxWrite(VmcsField_kHostIa32SysenterCs, __rdmsr(0x174));
+    Asm_vmxWrite(VmcsField_kHostIa32SysenterCs, __rdmsr(Msr_kIa32SysenterCs));
 
-    Asm_vmxWrite(VmcsField_kHostFsBase,  __rdmsr(0xC0000100));
-    Asm_vmxWrite(VmcsField_kHostGsBase,  __rdmsr(0xC0000101));
-    Asm_vmxWrite(VmcsField_kHostIa32SysenterEsp, __rdmsr(0x175));
-    Asm_vmxWrite(VmcsField_kHostIa32SysenterEip, __rdmsr(0x176));
+    Asm_vmxWrite(VmcsField_kHostFsBase,  __rdmsr(Msr_kIa32FsBase));
+    Asm_vmxWrite(VmcsField_kHostGsBase,  __rdmsr(Msr_kIa32GsBase));
+    Asm_vmxWrite(VmcsField_kHostIa32SysenterEsp, __rdmsr(Msr_kIa32SysenterEsp));
+    Asm_vmxWrite(VmcsField_kHostIa32SysenterEip, __rdmsr(Msr_kIa32SysenterEip));
 
     Asm_vmxWrite(VmcsField_kHostCr0, read_cr0());
     Asm_vmxWrite(VmcsField_kHostCr3, __read_cr3());
@@ -289,14 +290,14 @@ bool SetupVMCS(void *guest_rsp, void *guest_rip, void *host_rip) {
     Asm_vmxWrite(VmcsField_kHostIdtrBase, idtr.base);
 
     Asm_vmxWrite(VmcsField_kVmcsLinkPointer, ~((uint64_t)0u));
-    bool l_bool_useTrueMsr = (__rdmsr(0x480) >> 55) & 0x1;
+    bool l_bool_useTrueMsr = (__rdmsr(Msr_kIa32VmxBasic) >> 55) & 0x1;
 
-    Asm_vmxWrite(VmcsField_kPinBasedVmExecControl,  WhisperAdjustControlValue((l_bool_useTrueMsr) ? 0x48D: 0x481, 0));
-    Asm_vmxWrite(VmcsField_kCpuBasedVmExecControl, WhisperAdjustControlValue((l_bool_useTrueMsr) ? 0x48E: 0x482, 0));
+    Asm_vmxWrite(VmcsField_kPinBasedVmExecControl,  WhisperAdjustControlValue((l_bool_useTrueMsr) ? Msr_kIa32VmxTruePinbasedCtls: Msr_kIa32VmxPinbasedCtls, 0));
+    Asm_vmxWrite(VmcsField_kCpuBasedVmExecControl, WhisperAdjustControlValue((l_bool_useTrueMsr) ? Msr_kIa32VmxTrueProcBasedCtls: Msr_kIa32VmxProcBasedCtls, 0));
     Asm_vmxWrite(VmcsField_kExceptionBitmap, 0);
-    Asm_vmxWrite(VmcsField_kVmExitControls, WhisperAdjustControlValue((l_bool_useTrueMsr) ? 0x48F: 0x483, 1 << 9));
-    Asm_vmxWrite(VmcsField_kVmEntryControls, WhisperAdjustControlValue((l_bool_useTrueMsr) ? 0x490: 0x484, (1 << 2) | (1 << 9)));
-    Asm_vmxWrite(VmcsField_kSecondaryVmExecControl, WhisperAdjustControlValue(0x48b, 0));
+    Asm_vmxWrite(VmcsField_kVmExitControls, WhisperAdjustControlValue((l_bool_useTrueMsr) ? Msr_kIa32VmxTrueExitCtls: Msr_kIa32VmxExitCtls, 1 << 9));
+    Asm_vmxWrite(VmcsField_kVmEntryControls, WhisperAdjustControlValue((l_bool_useTrueMsr) ? Msr_kIa32VmxTrueEntryCtls: Msr_kIa32VmxEntryCtls, (1 << 2) | (1 << 9)));
+    Asm_vmxWrite(VmcsField_kSecondaryVmExecControl, WhisperAdjustControlValue(Msr_kIa32VmxProcBasedCtls2, 0));
 
     Asm_vmxWrite(VmcsField_kGuestRsp, guest_rsp);
     Asm_vmxWrite(VmcsField_kGuestRip, guest_rip);
@@ -314,12 +315,12 @@ int whisper_init(void)
     unsigned int eax = 0x1, ebx = 0, ecx = 0, edx = 0;
     __cpuid(&eax, &ebx, &ecx, &edx);
 
-    unsigned long long val = __rdmsr(0x03A);
+    unsigned long long val = __rdmsr(Msr_kIa32FeatureControl);
     bool isSupported = (ecx & (1 << 5)) && (val & (1 << 2));
     if (isSupported)
     {
        val |= 1;
-       __wrmsr(0x03A, val, val >> 32);
+       __wrmsr(Msr_kIa32FeatureControl, val, val >> 32);
 
        InitCrX();
        isSupported = InitVmxon() && InitVmcs();
