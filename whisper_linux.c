@@ -310,6 +310,14 @@ bool SetupVMCS(void *guest_rsp, void *guest_rip, void *host_rip) {
     return false;
 }
 
+bool InitializeVM(void *guest_rsp, void *guest_rip, void *host_rip) {
+    if( InitVmxon() && InitVmcs() && SetupVMCS(guest_rsp, guest_rip, host_rip)) {
+      return true;
+    } else {
+      return false;
+    }
+}
+
 int whisper_init(void)
 {	
     unsigned int eax = 0x1, ebx = 0, ecx = 0, edx = 0;
@@ -323,17 +331,12 @@ int whisper_init(void)
        __wrmsr(Msr_kIa32FeatureControl, val, val >> 32);
 
        InitCrX();
-       isSupported = InitVmxon() && InitVmcs();
-
+       isSupported = Asm_init((void*)InitializeVM);
        if (isSupported)
        {
-          if (Asm_init((void*)SetupVMCS))
-          {
-            printk(KERN_INFO "Asm_init run success\n");
-          } else {
-            printk(KERN_INFO "Asm_init run failed\n");
-          }
-          
+         printk(KERN_INFO "Asm_init run success\n");
+       } else {
+         printk(KERN_INFO "Asm_init run failed\n");
        }
     }
     
