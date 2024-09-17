@@ -329,17 +329,33 @@ int whisper_init(void)
     bool isSupported = (ecx & (1 << 5)) && (val & (1 << 2));
     if (isSupported)
     {
-       val |= 1;
-       __wrmsr(Msr_kIa32FeatureControl, val, val >> 32);
+      val |= 1;
+      __wrmsr(Msr_kIa32FeatureControl, val, val >> 32);
 
-       InitCrX();
-       isSupported = Asm_init((void*)InitializeVM);
-       if (isSupported)
-       {
-         printk(KERN_INFO "Asm_init run success\n");
-       } else {
-         printk(KERN_INFO "Asm_init run failed\n");
-       }
+      InitCrX();
+      
+      unsigned int vendorID[4] = {};
+      eax = 0;
+      vendorID[3] = 0;
+      __cpuid(&eax, &vendorID[0], &vendorID[2], &vendorID[1]);
+       printk(KERN_INFO "VendorID[before]: %s\n", vendorID);
+
+      isSupported = Asm_init((void*)InitializeVM);
+      if (isSupported)
+      {
+        eax = 0;
+        vendorID[3] = 0;
+        __cpuid(&eax, &vendorID[0], &vendorID[2], &vendorID[1]);
+        printk(KERN_INFO "VendorID[after]: %s\n", vendorID);
+
+        // trigger exit.
+        eax = 1;
+        __cpuid(&eax, &vendorID[0], &vendorID[2], &vendorID[1]);
+        
+        printk(KERN_INFO "Asm_init run success\n");
+      } else {
+        printk(KERN_INFO "Asm_init run failed\n");
+      }
     }
     
     if (!isSupported)

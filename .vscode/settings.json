@@ -4,6 +4,8 @@
         "module.h": "c",
         "vmcsfield.h": "c",
         "compare": "c",
-        "cstdint": "c"
+        "cstdint": "c",
+        "asm_function_x64.h": "c",
+        "types.h": "c"
     }
 }
