@@ -1,8 +1,11 @@
 #include <linux/types.h>
 
 typedef struct _Whisper_Result_Registers {
-  uint64_t rip;
-  uint64_t rsp;
+   	uint64_t rip;
+  	uint64_t cs;
+	uint64_t eflags;
+  	uint64_t rsp;
+  	uint64_t ss;
 }__attribute__((packed)) Whisper_Result_Registers, *PWhisper_Result_Registers;
 
 typedef struct _Whisper_GpRegisters {

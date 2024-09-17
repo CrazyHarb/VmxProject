@@ -246,7 +246,7 @@ guest_run:
 		ret
 
 Asm_VmmEntryPoint:
-	subq $0x18, %rsp  # "movaps needs 16 bytes aligned"  --huoji (key08.com)
+	subq $0x28, %rsp  # "movaps needs 16 bytes aligned"  --huoji (key08.com)
 	pushfq      # save eflags
 	Asm_pushad  # save regs
 	Asm_saveXmm # save xmm regs
@@ -264,12 +264,12 @@ Asm_VmmEntryPoint:
 
 call_vmmOff:
 	Asm_storeXmm # restore xmm
+
+	vmxoff
+
 	Asm_popad    # restore regs
 	popfq        # restore eflags
-	vmxoff
-	movq 0(%rsp), %rax
-	movq 8(%rsp), %rsp
-
-	jmp *%rax
+	
+	iretq
 	
 	             
