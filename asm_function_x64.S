@@ -238,7 +238,6 @@ Asm_init:
 		ret
 
 guest_run:
-		cpuid
 		Asm_popad
 		popfq
 		xorq %rax,%rax
