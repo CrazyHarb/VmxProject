@@ -6,6 +6,7 @@ typedef struct _Whisper_Result_Registers {
 	uint64_t eflags;
   	uint64_t rsp;
   	uint64_t ss;
+	uint64_t cr3;
 }__attribute__((packed)) Whisper_Result_Registers, *PWhisper_Result_Registers;
 
 typedef struct _Whisper_GpRegisters {

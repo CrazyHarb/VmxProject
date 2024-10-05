@@ -30,6 +30,7 @@ uint64_t Asm_readEflags(void);
 bool Asm_init(void *func);
 
 void Asm_launch(void);
+void Asm_VmCallForVmware(void *regstack);
 
 uint64_t Asm_VmRead(uint64_t a_uint64_index);
 uint64_t Asm_ReadCr8(void);

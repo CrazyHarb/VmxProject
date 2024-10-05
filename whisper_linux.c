@@ -284,6 +284,7 @@ bool SetupVMCS(void *guest_rsp, void *guest_rip, void *host_rip) {
 
     Asm_vmxWrite(VmcsField_kHostCr0, read_cr0());
     Asm_vmxWrite(VmcsField_kHostCr3, __read_cr3());
+    printk(KERN_INFO "currentcr3: 0x%llx\n",  __read_cr3());  
     Asm_vmxWrite(VmcsField_kHostCr4, __read_cr4());
     Asm_vmxWrite(VmcsField_kHostTrBase, WhisperGetSegmentBase(gdtr.base, Asm_readTR()));
     Asm_vmxWrite(VmcsField_kHostGdtrBase, gdtr.base);
@@ -293,11 +294,20 @@ bool SetupVMCS(void *guest_rsp, void *guest_rip, void *host_rip) {
     bool l_bool_useTrueMsr = (__rdmsr(Msr_kIa32VmxBasic) >> 55) & 0x1;
 
     Asm_vmxWrite(VmcsField_kPinBasedVmExecControl,  WhisperAdjustControlValue((l_bool_useTrueMsr) ? Msr_kIa32VmxTruePinbasedCtls: Msr_kIa32VmxPinbasedCtls, 0));
-    Asm_vmxWrite(VmcsField_kCpuBasedVmExecControl, WhisperAdjustControlValue((l_bool_useTrueMsr) ? Msr_kIa32VmxTrueProcBasedCtls: Msr_kIa32VmxProcBasedCtls, 0));
+    
+    Vmx_ProcessorBased_Controls StructVMProcessorControls = {0};
+    StructVMProcessorControls.fields.activate_secondary_control = 1;
+    Asm_vmxWrite(VmcsField_kCpuBasedVmExecControl, WhisperAdjustControlValue((l_bool_useTrueMsr) ? Msr_kIa32VmxTrueProcBasedCtls: Msr_kIa32VmxProcBasedCtls, StructVMProcessorControls.all));
+    
     Asm_vmxWrite(VmcsField_kExceptionBitmap, 0);
     Asm_vmxWrite(VmcsField_kVmExitControls, WhisperAdjustControlValue((l_bool_useTrueMsr) ? Msr_kIa32VmxTrueExitCtls: Msr_kIa32VmxExitCtls, 1 << 9));
     Asm_vmxWrite(VmcsField_kVmEntryControls, WhisperAdjustControlValue((l_bool_useTrueMsr) ? Msr_kIa32VmxTrueEntryCtls: Msr_kIa32VmxEntryCtls, (1 << 2) | (1 << 9)));
-    Asm_vmxWrite(VmcsField_kSecondaryVmExecControl, WhisperAdjustControlValue(Msr_kIa32VmxProcBasedCtls2, 0));
+    
+    Vmx_SecondaryProcessorBased_Controls StructSecondaryProcessorBasedControl = {0};
+    StructSecondaryProcessorBasedControl.fields.enable_rdtscp = 1;
+    StructSecondaryProcessorBasedControl.fields.enable_invpcid = 1;
+    StructSecondaryProcessorBasedControl.fields.enable_xsaves_xstors = 1;
+    Asm_vmxWrite(VmcsField_kSecondaryVmExecControl, WhisperAdjustControlValue(Msr_kIa32VmxProcBasedCtls2, StructSecondaryProcessorBasedControl.all));
 
     Asm_vmxWrite(VmcsField_kGuestRsp, (uint64_t)guest_rsp);
     Asm_vmxWrite(VmcsField_kGuestRip, (uint64_t)guest_rip);
@@ -320,8 +330,7 @@ bool InitializeVM(void *guest_rsp, void *guest_rip, void *host_rip) {
     }
 }
 
-int whisper_init(void)
-{	
+bool StartWhisper(void) {
     unsigned int eax = 0x1, ebx = 0, ecx = 0, edx = 0;
     __cpuid(&eax, &ebx, &ecx, &edx);
 
@@ -343,16 +352,12 @@ int whisper_init(void)
       isSupported = Asm_init((void*)InitializeVM);
       if (isSupported)
       {
+        printk(KERN_INFO "Asm_init run success\n");
+
         eax = 0;
-        vendorID[3] = 0;
         __cpuid(&eax, &vendorID[0], &vendorID[2], &vendorID[1]);
         printk(KERN_INFO "VendorID[after]: %s\n", vendorID);
 
-        // trigger exit.
-        eax = 1;
-        __cpuid(&eax, &vendorID[0], &vendorID[2], &vendorID[1]);
-        
-        printk(KERN_INFO "Asm_init run success\n");
       } else {
         printk(KERN_INFO "Asm_init run failed\n");
       }
@@ -363,12 +368,54 @@ int whisper_init(void)
         printk(KERN_INFO "%s\n", "unspported");
     }
     
-    return 0;
+    return isSupported;
+}
+
+bool StopWhisper(void) {
+  // trigger exit.
+  unsigned int eax = 'whis';
+  unsigned int vendorID[4] = {};
+  __cpuid(&eax, &vendorID[0], &vendorID[2], &vendorID[1]);
+  return true;
+}
+
+int whisper_init(void)
+{	  
+  unsigned int eax = 0;
+  unsigned int vendorID[4] = {};
+  vendorID[3] = 0;
+
+  // turn on run
+  int i;
+	bool bReturn = true;
+	for_each_online_cpu(i)
+	{
+		if (work_on_cpu(i, (void *)StartWhisper, 0)) {
+		
+		} else {
+			bReturn = false;
+			break;
+		}
+		
+	}
+
+  ssleep(20);
+
+  for_each_online_cpu(i)
+	{
+		if (work_on_cpu(i, (void *)StopWhisper, 0)) {
+		
+		} else {
+			break;
+		}
+		printk(KERN_INFO "Stop %d\n", i);
+	}
+  return 0;
 }
 
 void whisper_exit(void)
 {
-   
+
 }
 
 module_init(whisper_init);

@@ -7,7 +7,7 @@
 .global Asm_readTR, Asm_readldtr, Asm_init
 .global __segmentlimit, Asm_LoadAccessRightsByte, Asm_SGDT, Asm_SIDT, Asm_LGDT, Asm_LIDT
 .global Asm_readDr7, Asm_readEflags
-.global Asm_ReadCr8, Asm_VmRead
+.global Asm_ReadCr8, Asm_VmRead, Asm_VmCallForVmware
 
 Asm_launch:
 	vmlaunch
@@ -222,6 +222,32 @@ Asm_ReadCr8:
 	addq $0x100, %rsp
 .endm
 
+Asm_VmCallForVmware:
+        Asm_pushad
+
+		# vmware use regs in order:  rax rbx rcx rdx rsi rdi 
+        
+        movq 9*8(%rdi), %rsi
+        movq 13*8(%rdi), %rdx
+        movq 14*8(%rdi), %rcx
+        movq 12*8(%rdi), %rbx
+        movq 15*8(%rdi), %rax
+        movq 8*8(%rdi), %rdi
+
+        vmcall
+
+        movq 8*8(%rsp), %r8
+
+        movq %rsi,9*8(%r8)
+        movq %rdx,13*8(%r8)
+        movq %rcx,14*8(%r8)
+        movq %rbx,12*8(%r8)
+        movq %rax,15*8(%r8)
+        movq %rdi,8*8(%r8)
+
+        Asm_popad
+        ret
+
 Asm_init:
 		pushfq
 		Asm_pushad
@@ -246,7 +272,7 @@ guest_run:
 		ret
 
 Asm_VmmEntryPoint:
-	subq $0x28, %rsp  # "movaps needs 16 bytes aligned"  --huoji (key08.com)
+	subq $0x38, %rsp  # "movaps needs 16 bytes aligned"  --huoji (key08.com)
 	pushfq      # save eflags
 	Asm_pushad  # save regs
 	Asm_saveXmm # save xmm regs
@@ -269,6 +295,12 @@ call_vmmOff:
 
 	Asm_popad    # restore regs
 	popfq        # restore eflags
+
+	xchgq 0x28(%rsp), %rax
+
+	movq %rax, %cr3
+
+	movq 0x28(%rsp), %rax
 	
 	iretq
 	

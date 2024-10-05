@@ -273,3 +273,69 @@ enum VmxExitReason{
   VmxExitReason_kXsaves = 63,
   VmxExitReason_kXrstors = 64,
 };
+
+// MSR Msr_kIa32VmxProcBasedCtls/Msr_kIa32VmxTrueProcBasedCtls  0x482/0x48E
+typedef union _Vmx_ProcessorBased_Controls {
+  uint32_t all;
+  struct {
+    uint32_t reserved1 : 2;                   //!< [0:1]
+    uint32_t interrupt_window_exiting : 1;    //!< [2]
+    uint32_t use_tsc_offseting : 1;           //!< [3]
+    uint32_t reserved2 : 3;                   //!< [4:6]
+    uint32_t hlt_exiting : 1;                 //!< [7]
+    uint32_t reserved3 : 1;                   //!< [8]
+    uint32_t invlpg_exiting : 1;              //!< [9]
+    uint32_t mwait_exiting : 1;               //!< [10]
+    uint32_t rdpmc_exiting : 1;               //!< [11]
+    uint32_t rdtsc_exiting : 1;               //!< [12]
+    uint32_t reserved4 : 2;                   //!< [13:14]
+    uint32_t cr3_load_exiting : 1;            //!< [15]
+    uint32_t cr3_store_exiting : 1;           //!< [16]
+    uint32_t reserved5 : 2;                   //!< [17:18]
+    uint32_t cr8_load_exiting : 1;            //!< [19]
+    uint32_t cr8_store_exiting : 1;           //!< [20]
+    uint32_t use_tpr_shadow : 1;              //!< [21]
+    uint32_t nmi_window_exiting : 1;          //!< [22]
+    uint32_t mov_dr_exiting : 1;              //!< [23]
+    uint32_t unconditional_io_exiting : 1;    //!< [24]
+    uint32_t use_io_bitmaps : 1;              //!< [25]
+    uint32_t reserved6 : 1;                   //!< [26]
+    uint32_t monitor_trap_flag : 1;           //!< [27]
+    uint32_t use_msr_bitmaps : 1;             //!< [28]
+    uint32_t monitor_exiting : 1;             //!< [29]
+    uint32_t pause_exiting : 1;               //!< [30]
+    uint32_t activate_secondary_control : 1;  //!< [31]
+  } fields;
+}__attribute__((packed)) Vmx_ProcessorBased_Controls, *PVmx_ProcessorBased_Controls;
+
+/// MSR Msr_kIa32VmxProcBasedCtls2 0x48B
+typedef union _Vmx_SecondaryProcessorBased_Controls {
+  uint32_t all;
+  struct {
+    uint32_t virtualize_apic_accesses : 1;            //!< [0]
+    uint32_t enable_ept : 1;                          //!< [1]
+    uint32_t descriptor_table_exiting : 1;            //!< [2]
+    uint32_t enable_rdtscp : 1;                       //!< [3]
+    uint32_t virtualize_x2apic_mode : 1;              //!< [4]
+    uint32_t enable_vpid : 1;                         //!< [5]
+    uint32_t wbinvd_exiting : 1;                      //!< [6]
+    uint32_t unrestricted_guest : 1;                  //!< [7]
+    uint32_t apic_register_virtualization : 1;        //!< [8]
+    uint32_t virtual_interrupt_delivery : 1;          //!< [9]
+    uint32_t pause_loop_exiting : 1;                  //!< [10]
+    uint32_t rdrand_exiting : 1;                      //!< [11]
+    uint32_t enable_invpcid : 1;                      //!< [12]
+    uint32_t enable_vm_functions : 1;                 //!< [13]
+    uint32_t vmcs_shadowing : 1;                      //!< [14]
+    uint32_t reserved1 : 1;                           //!< [15]
+    uint32_t rdseed_exiting : 1;                      //!< [16]
+    uint32_t reserved2 : 1;                           //!< [17]
+    uint32_t ept_violation_ve : 1;                    //!< [18]
+    uint32_t reserved3 : 1;                           //!< [19]
+    uint32_t enable_xsaves_xstors : 1;                //!< [20]
+    uint32_t reserved4 : 1;                           //!< [21]
+    uint32_t mode_based_execute_control_for_ept : 1;  //!< [22]
+    uint32_t reserved5 : 2;                           //!< [23:24]
+    uint32_t use_tsc_scaling : 1;                     //!< [25]
+  } fields;
+}__attribute__((packed)) Vmx_SecondaryProcessorBased_Controls, *PVmx_SecondaryProcessorBased_Controls;
