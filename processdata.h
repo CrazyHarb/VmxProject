@@ -90,3 +90,15 @@ typedef struct _Guest_Context {
 	bool vm_continue;
 }__attribute__((packed)) Guest_Context, *PGuest_Context;
 
+typedef union {
+    uint64_t all;
+    struct {
+        uint64_t reserve : 3;
+        uint64_t writethrough : 1;
+        uint64_t cachedisable : 1;
+        uint64_t reserve2 : 7;
+        uint64_t pfn : 36;
+        uint64_t reserve3 : 16;
+    };
+} _cr3;
+

@@ -8,6 +8,7 @@
 #include "asm_function_x64.h"
 #include "vmcsfield.h"
 #include "rdmsr_struct.h"
+#include "processdata.h"
 
 
 MODULE_LICENSE("Dual BSD/GPL");
@@ -203,6 +204,35 @@ uint32_t WhisperAdjustControlValue(uint64_t msr, uint32_t requested_value) {
   return requested_value;
 }
 
+_cr3 g_cr3_newInstance = {0};
+pgd_t *g_pgdt_instance = 0;
+
+uint64_t buildCr3(void) {
+	if (g_cr3_newInstance.all)
+	{
+		return g_cr3_newInstance.all;
+	} else {
+		g_pgdt_instance = (pgd_t *)__get_free_page(GFP_KERNEL);
+
+		printk(KERN_INFO "[Whipser]crrent 0x%llx\n", current);
+		printk(KERN_INFO "[Whipser]current->mm 0x%llx\n", current->mm);
+		printk(KERN_INFO "[Whipser]current->mm->pgd 0x%llx\n", current->mm->pgd);
+		if (g_pgdt_instance && current && current->mm && current->mm->pgd)
+		{
+			memset(g_pgdt_instance, 0, PAGE_SIZE);
+			memcpy(g_pgdt_instance, current->mm->pgd, PAGE_SIZE);
+
+			uint64_t newcr3 = (uint64_t)virt_to_phys(g_pgdt_instance) >> PAGE_SHIFT;
+
+			g_cr3_newInstance.all = __read_cr3();
+			g_cr3_newInstance.pfn = newcr3;
+		}
+
+		printk(KERN_INFO "[Whipser]cr3NewUnion 0x%llx\n", g_cr3_newInstance.all);
+		return g_cr3_newInstance.all;
+	}
+}
+
 bool SetupVMCS(void *guest_rsp, void *guest_rip, void *host_rip) {
    Gdtr gdtr = {};
     Asm_SGDT(&gdtr);
@@ -283,8 +313,8 @@ bool SetupVMCS(void *guest_rsp, void *guest_rip, void *host_rip) {
     Asm_vmxWrite(VmcsField_kHostIa32SysenterEip, __rdmsr(Msr_kIa32SysenterEip));
 
     Asm_vmxWrite(VmcsField_kHostCr0, read_cr0());
-    Asm_vmxWrite(VmcsField_kHostCr3, __read_cr3());
-    printk(KERN_INFO "currentcr3: 0x%llx\n",  __read_cr3());  
+    Asm_vmxWrite(VmcsField_kHostCr3, buildCr3());
+    printk(KERN_INFO "currentcr3: 0x%llx\n",  buildCr3());  
     Asm_vmxWrite(VmcsField_kHostCr4, __read_cr4());
     Asm_vmxWrite(VmcsField_kHostTrBase, WhisperGetSegmentBase(gdtr.base, Asm_readTR()));
     Asm_vmxWrite(VmcsField_kHostGdtrBase, gdtr.base);
@@ -380,14 +410,11 @@ bool StopWhisper(void) {
 }
 
 int whisper_init(void)
-{	  
-  unsigned int eax = 0;
-  unsigned int vendorID[4] = {};
-  vendorID[3] = 0;
-
+{
   // turn on run
   int i;
 	bool bReturn = true;
+  buildCr3();
 	for_each_online_cpu(i)
 	{
 		if (work_on_cpu(i, (void *)StartWhisper, 0)) {
@@ -399,8 +426,14 @@ int whisper_init(void)
 		
 	}
 
-  ssleep(20);
+  printk(KERN_INFO "%s\n", "[whisper]start");
+  
+  return 0;
+}
 
+void whisper_exit(void)
+{
+  int i;
   for_each_online_cpu(i)
 	{
 		if (work_on_cpu(i, (void *)StopWhisper, 0)) {
@@ -410,12 +443,7 @@ int whisper_init(void)
 		}
 		printk(KERN_INFO "Stop %d\n", i);
 	}
-  return 0;
-}
-
-void whisper_exit(void)
-{
-
+  printk(KERN_INFO "%s\n", "[whisper]bye");
 }
 
 module_init(whisper_init);
